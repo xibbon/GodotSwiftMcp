@@ -57,11 +57,11 @@ public enum GodotError: LocalizedError {
 
 public protocol GodotProvider {
     /// Result is the node path of the resulting node
-    func createNode(parentPath: String, nodeType: String, nodeName: String) -> Result<String, GodotError>
-    func deleteNode(nodePath: String) -> Result<String, GodotError>
-    func updateNodeProperty(nodePath: String, property: String, value: String) -> Result<String, GodotError>
-    func getNodeProperties(nodePath: String) -> Result<[String: String], GodotError>
-    func listNodes(nodePath: String) -> Result<[(name: String, type: String, path: String)], GodotError>
+    func createNode(parentPath: String, nodeType: String, nodeName: String) throws -> String
+    func deleteNode(nodePath: String) throws -> String
+    func updateNodeProperty(nodePath: String, property: String, value: String) throws -> String
+    func getNodeProperties(nodePath: String) throws -> [String: String]
+    func listNodes(nodePath: String) throws -> [(name: String, type: String, path: String)]
 }
 
 extension CallTool.Result {

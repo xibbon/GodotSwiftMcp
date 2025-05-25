@@ -19,7 +19,8 @@ let package = Package(
             targets: ["GodotMcpServerCli"])
     ],
     dependencies: [
-            .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.8.2")
+            .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.8.2"),
+            .package(url: "https://github.com/loopwork-ai/JSONSchema.git", from: "1.1.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -27,13 +28,16 @@ let package = Package(
         .target(
             name: "GodotSwiftMcp", 
             dependencies: [
-                .product(name: "MCP", package: "swift-sdk")]
+                .product(name: "MCP", package: "swift-sdk"),
+                .product(name: "JSONSchema", package: "JSONSchema")
+            ]
         ),
         .executableTarget(
             name: "GodotMcpServerCli",
             dependencies: [
                 "GodotSwiftMcp",
-                .product(name: "MCP", package: "swift-sdk")
+                .product(name: "MCP", package: "swift-sdk"),
+                .product(name: "JSONSchema", package: "JSONSchema")
             ]
         ),
         .testTarget(

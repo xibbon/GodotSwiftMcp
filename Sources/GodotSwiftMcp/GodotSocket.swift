@@ -10,23 +10,23 @@ public class GodotLocalSocketProvider: GodotProvider {
         
     }
     
-    public func createNode(parentPath: String, nodeType: String, nodeName: String) -> Result<String, GodotError> {
-        .failure(.missingSceneRoot)
+    public func createNode(parentPath: String, nodeType: String, nodeName: String) throws -> String {
+        throw GodotError.missingSceneRoot
     }
     
-    public func deleteNode(nodePath: String) -> Result<String, GodotError> {
-        .failure(.missingSceneRoot)
+    public func deleteNode(nodePath: String) throws -> String {
+        throw GodotError.missingSceneRoot
     }
     
-    public func updateNodeProperty(nodePath: String, property: String, value: String) -> Result<String, GodotError> {
-        .failure(.missingSceneRoot)
+    public func updateNodeProperty(nodePath: String, property: String, value: String) throws -> String {
+        throw GodotError.missingSceneRoot
     }
     
-    public func getNodeProperties(nodePath: String) -> Result<[String : String], GodotError> {
-        .failure(.missingSceneRoot)
+    public func getNodeProperties(nodePath: String) throws -> [String: String] {
+        throw GodotError.missingSceneRoot
     }
     
-    public func listNodes(nodePath: String) -> Result<[(name: String, type: String, path: String)], GodotError> {
-        .failure(.missingSceneRoot)
+    public func listNodes(nodePath: String) throws -> [(name: String, type: String, path: String)] {
+        throw GodotError.missingSceneRoot
     }
 }
