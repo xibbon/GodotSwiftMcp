@@ -1,0 +1,2 @@
+all:
+	swift build
