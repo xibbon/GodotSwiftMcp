@@ -181,15 +181,48 @@ public class GodotMcpServer: @unchecked Sendable {
         await server.withMethodHandler(ListResources.self) { params in
             let resources = [
                 Resource(
-                    name: "XXKnowledge Base Articles",
-                    uri: "resource://knowledge-base/articles",
-                    description: "Collection of support articles and documentation"
+                    name: "Godot Scene List",
+                    uri: "resource://project/scene-list",
+                    mimeType: "application/json"),
+                Resource(
+                    name: "Godot Script List",
+                    uri: "resource://project/scripts",
+                    mimeType: "application/json"),
+                Resource(
+                    name: "Godot Project Structure",
+                    uri: "resource://project/structure",
+                    mimeType: "application/json"),
+                Resource(
+                    name: "Godot Project Settings",
+                    uri: "resource://project/settings",
+                    mimeType: "application/json"),
+                Resource(
+                    name: "Godot Editor State",
+                    uri: "resource://editor/state",
+                    mimeType: "application/json"),
+                Resource(
+                    name: "Godot Selected Node",
+                    uri: "resource://editor/selected_node",
+                    mimeType: "application/json"),
+                Resource(
+                    name: "Current Script in Editor",
+                    uri: "resource://editor_current_script",
+                    mimeType: "text/plain"),
+                Resource(
+                    name: "Godot Scene Structure",
+                    uri: "resource://project/scene/current",
+                    mimeType: "application/json"),
+                
+                // These are sus
+                Resource(
+                    name: "Godot Script Content",
+                    uri: "resource://project",
+                    mimeType: "text/plain"
                 ),
                 Resource(
-                    name: "System Status",
-                    uri: "resource://system/status",
-                    description: "Current system operational status"
-                )
+                    name: "Godot Script Metadata",
+                    uri: "resource://script/metadata",
+                    mimeType: "application/json")
             ]
             return .init(resources: resources, nextCursor: nil)
         }
