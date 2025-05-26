@@ -33,7 +33,7 @@ public class GodotMcpServer: @unchecked Sendable {
         await server.waitUntilCompleted()
     }
     
-    var sceneTools: [GodotTool] = [
+    let sceneTools: [GodotTool] = [
         GodotTool(
             name: "create_node",
             description: "Creates a new node in the current Godot scene",
@@ -44,13 +44,13 @@ public class GodotMcpServer: @unchecked Sendable {
                     "node_name": .string(description: "Name of the new node")
                 ],
                 required: ["parent_path", "node_type", "node_name"]),
-            annotations: .init(title: "Creates a new node in the current Godot scene", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true)
+            annotations: .init(title: "Creates a new node in the current Godot scene", readOnlyHint: false, destructiveHint: true, idempotentHint: false)
         ) { args, provider in
             guard let parentPath = args["parent_path"]?.stringValue else { throw MCPError.invalidParams("Missing parameter 'parent_path'")}
             guard let nodeType = args["node_type"]?.stringValue else { throw MCPError.invalidParams("Missing parameter 'node_type'") }
             guard let nodeName = args["node_name"]?.stringValue else { throw MCPError.invalidParams("Missing parameter 'node_name'") }
             
-            let newPath = try provider.createNode(parentPath: parentPath, nodeType: nodeType, nodeName: nodeName)
+            let newPath = try await provider.createNode(parentPath: parentPath, nodeType: nodeType, nodeName: nodeName)
             return "Created \(nodeType) named \(nodeName) at \(newPath)"
         },
         GodotTool(
@@ -61,13 +61,13 @@ public class GodotMcpServer: @unchecked Sendable {
                     "node_path": .string(description: "Path to the node to delete (e.g. '/root/MainScene/Player')")
                 ],
                 required: ["node_path"]),
-            annotations: .init(title: "Deltes a node in the current Godot scene", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true)
+            annotations: .init(title: "Deltes a node in the current Godot scene", readOnlyHint: false, destructiveHint: true, idempotentHint: false)
         ) { args, provider in
             guard let nodePath = args["node_path"]?.stringValue
             else {
                 throw MCPError.invalidParams("Missing parameter 'node_path'")
             }
-            let path = try provider.deleteNode(nodePath: nodePath)
+            let path = try await provider.deleteNode(nodePath: nodePath)
             return "Deleted node at '\(path)'"
         },
         
@@ -81,13 +81,13 @@ public class GodotMcpServer: @unchecked Sendable {
                     "value": .string(description: "New value for the property")
                     ],
                 required: ["node_path", "property", "value"]),
-            annotations: .init(title: "Updates a propert of a node in the Godot scene tree", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true)
+            annotations: .init(title: "Updates a propert of a node in the Godot scene tree", readOnlyHint: false, destructiveHint: true, idempotentHint: false)
         ) { args, provider in
             guard let nodePath = args["node_path"]?.stringValue else { throw MCPError.invalidParams("Missing parameter 'node_path") }
             guard let property = args["property"]?.stringValue else { throw MCPError.invalidParams("Missing parameter 'property'") }
             guard let value = args["value"]?.stringValue else { throw MCPError.invalidParams("Missing parameter 'value'") }
 
-            let result = try provider.updateNodeProperty(nodePath: nodePath, property: property, value: value)
+            let result = try await provider.updateNodeProperty(nodePath: nodePath, property: property, value: value)
                 
             // TODO: this is returning a string, but other code I see does not do that
             return "Updated property '\(property)' of node '\(nodePath)' to '\(jsonString(result))"
@@ -100,14 +100,13 @@ public class GodotMcpServer: @unchecked Sendable {
                 properties: [
                     "node_path": .string(description: "Path to the node to inspect (e.g. '/root/MainScene/Player')")],
                 required: ["node_path"]),
-            annotations: .init(title: "Get all properties of a node in the Godot scene tree", readOnlyHint: true, destructiveHint: false, idempotentHint:true, openWorldHint: true)
+            annotations: .init(title: "Get all properties of a node in the Godot scene tree", readOnlyHint: true, destructiveHint: false, idempotentHint:true)
         ) { args, provider in
             guard let nodePath = args["node_path"]?.stringValue else {
                 throw MCPError.invalidParams("Missing parameter 'node_path'")
             }
-            let success = try provider.getNodeProperties(nodePath: nodePath)
-            let result = success.map { "\($0.key): \(jsonString($0.value))"}.joined(separator: "\n")
-            return "Properties of node at '\(nodePath)': \n\n\(result)"
+            let success = try await provider.getNodeProperties(nodePath: nodePath)
+            return "Properties of node at '\(nodePath)': \n\n\(success)"
         },
         
         GodotTool(
@@ -119,13 +118,12 @@ public class GodotMcpServer: @unchecked Sendable {
                 ],
                 required: ["parent_path"]
             ),
-            annotations: .init(title: "Lists all child nodes under a parent node in the Godot scene tree", readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: true)
+            annotations: .init(title: "Lists all child nodes under a parent node in the Godot scene tree", readOnlyHint: true, destructiveHint: false, idempotentHint: false)
         ) { args, provider in
-            guard let parentPath = args["parent_path"]?.stringValue
-            else {
+            guard let parentPath = args["parent_path"]?.stringValue else {
                 throw MCPError.invalidParams("Missing parameter 'parent_path'")
             }
-            let success = try provider.listNodes(nodePath: parentPath)
+            let success = try await provider.listNodes(nodePath: parentPath)
             if success.isEmpty {
                 return "The node at '\(parentPath)' does not have any children nodes."
             }
@@ -134,14 +132,303 @@ public class GodotMcpServer: @unchecked Sendable {
         }
     ]
     
-    func registerHandlers() async throws {
-        let tools = sceneTools
+    let scriptTools: [GodotTool] = [
+        GodotTool(
+            name: "create_script",
+            description: "Create a new GDScript file in the project",
+            inputSchema: .object(
+                properties: [
+                    "script_path": .string(description: "Path where the script will be saved (e.g. 'res://scripts/player.gd')"),
+                    "content": .string(description: "Content of the scritpt"),
+                    "node_path": .string(description: "Optional path to a node to attach the script to.")
+                ],
+                required: ["script_path", "content"],
+            ),
+            annotations: .init(title: "Create a new GDScript file in the project", readOnlyHint: false, destructiveHint: false, idempotentHint: true)
+        ) { args, provider in
+            guard let scriptPath = args["script_path"]?.stringValue else {
+                throw MCPError.invalidParams("Missing parameter 'script_path'")
+            }
+            guard let content = args["content"]?.stringValue else {
+                throw MCPError.invalidParams("Missing parameter 'content'")
+            }
+            let attachMessage: String
+            let nodePath = args["node_path"]?.stringValue
+            if let nodePath {
+                attachMessage = " and attached to node at '\(nodePath)"
+            } else {
+                attachMessage = ""
+            }
+            try await await provider.createScript(scriptPath: scriptPath, content: content, nodePath: nodePath)
+            return "Created script at '\(scriptPath)'\(attachMessage)."
+        },
+        GodotTool(
+            name: "edit_script",
+            description: "Edit an existing GDScript File",
+            inputSchema: .object(
+                properties: [
+                    "script_path": .string(title: "Path t the scrip file to edit (e.g. 'res://scripts/player.gd')"),
+                    "content": .string(description: "New content of the script")],
+                required: ["script_path", "content"]),
+            annotations: .init(title: "Edit an existing GDScript file", readOnlyHint: false, destructiveHint: false, idempotentHint: true)
+        ) { args, provider in
+            guard let scriptPath = args["script_path"]?.stringValue else {
+                throw MCPError.invalidParams("Missing parameter 'script_path'")
+            }
+            guard let content = args["content"]?.stringValue else {
+                throw MCPError.invalidParams("Missing parameter 'content'")
+            }
+            try await provider.editScript(scriptPath: scriptPath, content: content)
+            return "Updated script at '\(scriptPath)'"
+        },
+        
+        GodotTool(
+            name: "get_script",
+            description: "Get the contents of a GDScript file via the script_path or node_path",
+            inputSchema: .object(
+                properties: [
+                    "script_path": .string(description: "Path where the script resides (e.g. 'res://scripts/player.gd')"),
+                    "node_path": .string(description: "Path to a node with the script attached")
+                ],
+            ),
+            annotations: .init(readOnlyHint: true, destructiveHint: false, idempotentHint: false)
+        ) { args, provider in
+            let scriptPath = args["script_path"]?.stringValue
+            let nodePath = args["node_path"]?.stringValue
+            
+            if scriptPath == nil && nodePath == nil {
+                throw MCPError.invalidParams("Missing parameter 'script_path' or 'node_path'")
+            }
+            let result = try await provider.getScript(scriptPath: scriptPath, nodePath: nodePath)
+            return "Script at scriptPath='\(scriptPath ?? "") and nodePath='\(nodePath ?? "")' contains:\n\n```gdscript\n\(result)\n```"
+        },
+        
+        GodotTool(
+            name: "create_script_template",
+            description: "Generate a GDScript template with common boilerplate",
+            inputSchema: .object(
+                properties: [
+                    "class_name": .string(description: "Optional class name for the script"),
+                    "extends_type": .string(description: "Base class that this scripts extends (e.g. 'Node', 'Node2D', 'Control'"),
+                    "include_ready": .boolean(description: "Whether to include the _ready() function"),
+                    "include_process": .boolean(description: "Whether to include the _process() function"),
+                    "include_input": .boolean(description: "Whether to include the _input() function"),
+                    "include_physics": .boolean(description: "Whether to include the _physics_function() function"),
+                ]
+            ),
+            annotations: .init(readOnlyHint: false, destructiveHint: true, idempotentHint: false)
+        ) { args, provider in
+            let className = args["class_name"]?.stringValue
+            let extendsType = args["extends_type"]?.stringValue ?? "Node"
+            let includeReady = args["include_ready"]?.boolValue ?? false
+            let includeProcess = args["include_process"]?.boolValue ?? false
+            let includeInput = args["include_input"]?.boolValue ?? false
+            let includePhysics = args["include_physics"]?.boolValue ?? false
+            
+            // Generate locally before calling godot
+            var template = ""
+            if let className {
+                template += "class_name \(className)\n"
+            }
+            template += "extends \(extendsType)\n\n"
+            
+            if includeReady {
+                template += "func _ready():\n\tpass\n\n"
+            }
+            if includeProcess {
+                template += "func _process(delta):\n\tpass\n\n"
+            }
+            if includePhysics {
+                template += "func _physics_process(delta):\n\tpass\n\n"
+            }
+            if includeInput {
+                template += "func _input(event):\n\tpass\n\n"
+            }
+            return "Generated GDScript template:\n\n```gdscript\n\(template)\n```"
+        }
+    ]
+    
+    let assetTools: [GodotTool] = [
+        GodotTool(
+            name: "list_assets_by_type",
+            description: "Lists all assets of a specific type in the project",
+            inputSchema: .object(
+                properties: [
+                    "type": .string(description: "Type of assets to list (e.g. 'images', 'audio', 'models', 'all'"),
+                    "limit": .integer(description: "If you specify the limit, only the first `limit` assets will be returned, otherwise all the matching assets are returned")
+                ],
+                required: ["type"]),
+            annotations: .init(readOnlyHint: true)
+        ) { args, provider in
+            guard let type = args["type"]?.stringValue else {
+                throw MCPError.invalidParams("Missing 'type' argument")
+            }
+            let limit = args["limit"]?.intValue ?? Int.max
+            
+            let list = try await provider.listAssets(type: type)
+            if list.isEmpty {
+                return "No assets of type \(type) found"
+            } else {
+                var result = ""
+                let items = min(list.count, limit)
+                for x in 0..<items {
+                    result += "- \(list[x])\n"
+                }
+                return "Found \(items) of type '\(type)' in the project:\n\n\(result)"
+            }
+        },
+        GodotTool(
+            name: "list_project_files",
+            description: "List files in the project matching specified extensions",
+            inputSchema: .object(
+                properties: [
+                    "extensions": .array(description: "Optional list of extension to filter by (e.g. '*.tscn', '*.gd')", items: .string()),
+                    "limit": .integer(description: "If you specify the limit, only the first `limit` files will be returned, otherwise all the matching files are returned")
+                ]
+            ),
+            annotations: .init(readOnlyHint: true)
+        ) { args, provider in
+            
+            let extensions = args["extensions"]?.arrayValue?.compactMap { $0.stringValue } ?? []
+            let limit = args["limit"]?.intValue ?? Int.max
+         
+            let fileList = try await provider.listProjectFiles(extensions: extensions)
+            if fileList.isEmpty {
+                if extensions.isEmpty {
+                    return "No files found"
+                } else {
+                    return "No files found with those extensions "
+                }
+            } else {
+                var result = ""
+                let items = min(fileList.count, limit)
+                for x in 0..<items {
+                    result += "- \(fileList[x])\n"
+                }
+                return "Found \(items) files in the project:\n\n\(result)"
+            }
+        }
+    ]
+            
+    let editorTools: [GodotTool] = [
+        GodotTool(
+            name: "execute_editor_script",
+            description: "Executes arbitrary GDScript code in the Godot Editor",
+            inputSchema: .object(
+                properties: [
+                    "code": .string(description: "GDScript code to execute in the editor context")
+                ]),
+            annotations: .init(destructiveHint: true)
+        ) { args, provider in
+            guard let code = args["code"]?.stringValue else {
+                throw MCPError.invalidParams("Missing parameter 'code'")
+            }
+            let result = try await provider.executeEditorScript(code: code)
+            return "Script result: \(result.joined(separator: "\n"))"
+        }
+    ]
+    
+    let enhancedTools: [GodotTool] = [
+        GodotTool(
+            name: "get_full_scene_tree",
+            description: "Get the compelte scene tree hierarhchy of the current scene",
+            inputSchema: .object(
+                properties: [:]),
+            annotations: .init(readOnlyHint: true)
+        ) { args, provider in
+            let scene = try await provider.getSceneTree()
+            
+            func formatNode(node: GodotProviderNode, indent: String = "") -> String {
+                var output = "\(indent)\(node.name) (\(node.type))"
+                if let children = node.children, children.count > 0 {
+                    output += "\n"
+                    output += children.map { formatNode(node: $0, indent: indent + "  ") }.joined(separator: "\n")
+                }
+                return output
+            }
+            
+            return formatNode(node: scene)
+        },
+        
+        GodotTool(
+            name: "get_debug_output",
+            description: "Get the debug output from the Godot Editor",
+            inputSchema: .object(),
+            annotations: .init(readOnlyHint: true)
+        ) { args, provider in
+            let output = try await provider.getDebugOutput()
+            
+            return "Debug Output:\n\(output)"
+        },
+        
+        GodotTool(
+            name: "get_current_scene_structure",
+            description: "Get about the current scene, path root and name",
+            inputSchema: .object(),
+            annotations: .init(readOnlyHint: true)
+        ) { args, provider in
+            
+            if let info = try await provider.getCurrentSceneInfo() {
+                if let path = info.path {
+                    return "The current scene is saved at: \(path)\nRoot Node: \(info.name) (\(info.type))"
+                } else {
+                    return "The current scene is not saved yet\nRoot Node: \(info.name) (\(info.type))"
+                }
+            } else {
+                return "There is no current scene"
+            }
+        },
+        
+        GodotTool(
+            name: "update_2dnode_transform",
+            description: "Update position, rotation, or scale of a Node",
+            inputSchema: .object(
+                properties: [
+                    "node_path": .string(description: "Path to the node to update (e.g. '/root/MainScene/Player')"),
+                    "position": .array(description: "New position as (x, y)", items: .number(), minItems: 2, maxItems: 2),
+                    "rotation": .number(description: "New rotation in radians"),
+                    "scale": .array(description: "New scale as (x, y)", items: .number(), minItems: 2, maxItems: 2),
+                ]
+            ),
+            annotations: .init(readOnlyHint: false)
+        ) { args, provider in
+            guard let nodePath = args["node_path"]?.stringValue else {
+                throw MCPError.invalidParams("Missing 'node_path' argument")
+            }
+            var position: (Double, Double)? = nil
+            if case let .array(argsPosition) = args["position"] {
+                if argsPosition.count != 2 {
+                    throw MCPError.invalidParams("You must specified both x and y coordinates")
+                }
+                guard let positionX = argsPosition[0].doubleValue, let positionY = argsPosition[1].doubleValue else {
+                    throw MCPError.invalidParams("Position argument must be a valid array of two doubles")
+                }
+                position = (positionX, positionY)
+            }
+            let argsRotation = args["rotation"]?.doubleValue
+            var scale: (Double, Double)? = nil
+            if case let .array(argsScale) = args["scale"] {
+                if argsScale.count != 2 {
+                    throw MCPError.invalidParams("You must specify both the scale in the x and y coorindates")
+                }
+                guard let scaleX = argsScale[0].doubleValue, let scaleY = argsScale[1].doubleValue else {
+                    throw MCPError.invalidParams("Scale argument must be a valid array of two doubles")
+                }
+                scale = (scaleX, scaleY)
+            }
+            try await provider.update2DTransform(nodePath: nodePath, position: position, rotation: argsRotation, scale: scale)
+            return "Updated transform for '\(nodePath)'"
+        }
+    ]
+    
+    func registerTools() async throws {
+        let tools = sceneTools + scriptTools + assetTools + editorTools + enhancedTools
         
         // Register a tool list handler
         await server.withMethodHandler(ListTools.self) { _ in
             return .init(tools: try tools.map { try $0.toMcpTool() })
         }
-
+        
         var buildImplementations: [String:  @Sendable ([String: Value], GodotProvider) async throws -> Value] = [:]
         for tool in tools {
             buildImplementations[tool.name] = tool.implementation
@@ -170,88 +457,100 @@ public class GodotMcpServer: @unchecked Sendable {
                 } else {
                     return .init(content: [.text("Could not encode result")], isError: true)
                 }
-            } catch let godotError as GodotError {
+            } catch let godotError as GodotMcpError {
                 return .init(content: [.text(godotError.errorDescription ?? "Godot Provider Error")], isError: true)
             } catch {
                 return .init(content: [.text(error.localizedDescription)], isError: true)
             }
         }
-
+    }
+    
+    let resources = [
+        Resource(
+            name: "Godot Scene List",
+            uri: "godot/scenes",
+            mimeType: "application/json"),
+        Resource(
+            name: "Godot Script List",
+            uri: "godot/scripts",
+            mimeType: "application/json"),
+        Resource(
+            name: "Godot Project Structure",
+            uri: "godot/project/structure",
+            mimeType: "application/json"),
+        Resource(
+            name: "Godot Project Settings",
+            uri: "godot/project/settings",
+            mimeType: "application/json"),
+        Resource(
+            name: "Godot Project Resources",
+            uri: "godot/project/resources",
+            mimeType: "application/json"),
+        Resource(
+            name: "Godot Editor State",
+            uri: "godot/editor/state",
+            mimeType: "application/json"),
+        Resource(
+            name: "Godot Selected Node",
+            uri: "godot/editor/selected_node",
+            mimeType: "application/json"),
+        Resource(
+            name: "Current Script in Editor",
+            uri: "godot/editor/current_script",
+            mimeType: "text/plain"),
+        Resource(
+            name: "Godot Scene Structure",
+            uri: "godot/scene/current",
+            mimeType: "application/json"),
+        
+        Resource(
+            name: "Script Content",
+            uri: "godot/script",
+            mimeType: "text/plain"
+        ),
+        Resource(
+            name: "Godot Script Metadata",
+            uri: "godot/script/metadata",
+            mimeType: "application/json"),
+        Resource(
+            name: "Full Scene Tree",
+            uri: "godot/scene/tree",
+            mimeType: "application/json"),
+        Resource(
+            name: "Godot Debug Output",
+            uri: "godot/debug/log",
+            mimeType: "text/plain"),
+        Resource(
+            name: "Asset List",
+            uri: "godot/assets",
+            mimeType: "application/json")
+    ]
+    
+    func registerResources() async {
         // Register a resource list handler
         await server.withMethodHandler(ListResources.self) { params in
-            let resources = [
-                Resource(
-                    name: "Godot Scene List",
-                    uri: "resource://project/scene-list",
-                    mimeType: "application/json"),
-                Resource(
-                    name: "Godot Script List",
-                    uri: "resource://project/scripts",
-                    mimeType: "application/json"),
-                Resource(
-                    name: "Godot Project Structure",
-                    uri: "resource://project/structure",
-                    mimeType: "application/json"),
-                Resource(
-                    name: "Godot Project Settings",
-                    uri: "resource://project/settings",
-                    mimeType: "application/json"),
-                Resource(
-                    name: "Godot Editor State",
-                    uri: "resource://editor/state",
-                    mimeType: "application/json"),
-                Resource(
-                    name: "Godot Selected Node",
-                    uri: "resource://editor/selected_node",
-                    mimeType: "application/json"),
-                Resource(
-                    name: "Current Script in Editor",
-                    uri: "resource://editor_current_script",
-                    mimeType: "text/plain"),
-                Resource(
-                    name: "Godot Scene Structure",
-                    uri: "resource://project/scene/current",
-                    mimeType: "application/json"),
-                
-                // These are sus
-                Resource(
-                    name: "Godot Script Content",
-                    uri: "resource://project",
-                    mimeType: "text/plain"
-                ),
-                Resource(
-                    name: "Godot Script Metadata",
-                    uri: "resource://script/metadata",
-                    mimeType: "application/json")
-            ]
-            return .init(resources: resources, nextCursor: nil)
+            return .init(resources: self.resources, nextCursor: nil)
         }
 
         // Register a resource read handler
         await server.withMethodHandler(ReadResource.self) { params in
+            // Produces a return value from a string that is already JSon encoded
+            func stringJson(_ jsonText: String) -> ReadResource.Result {
+                .init(contents: [.text(jsonText, uri: params.uri, mimeType: "application/json")])
+            }
             switch params.uri {
-            case "resource://knowledge-base/articles":
-                return .init(contents: [Resource.Content.text("# Knowledge Base\n\nThis is the content of the knowledge base...", uri: params.uri)])
-
-            case "resource://system/status":
-                //let status = "h"getCurrentSystemStatus() // Your implementation
-                let statusJson = """
-                    {
-                        "status": "\("healthy")",
-                        "components": {
-                            "database": "\("todo-db")",
-                            "api": "\("todo-api-v2")",
-                            "model": "\("todo-model-v3")"
-                        },
-                        "lastUpdated": "\("2025-01-01")"
-                    }
-                    """
-                return .init(contents: [Resource.Content.text(statusJson, uri: params.uri, mimeType: "application/json")])
-
+            case "godot/scenes":
+                return stringJson(try await self.provider.getScenes())
+                
             default:
                 throw MCPError.invalidParams("Unknown resource URI: \(params.uri)")
             }
         }
+    }
+    
+    func registerHandlers() async throws {
+        try await registerTools()
+        try await registerResources()
 
         // Register a resource subscribe handler
     }
@@ -279,7 +578,7 @@ struct GodotTool {
     public init<T: Encodable>(
         name: String,
         description: String,
-        inputSchema: JSONSchema? = nil,
+        inputSchema: JSONSchema?,
         annotations: Tool.Annotations,
         implementation: @Sendable @escaping ([String: Value], _ provider: GodotProvider) async throws -> T
     ) {
