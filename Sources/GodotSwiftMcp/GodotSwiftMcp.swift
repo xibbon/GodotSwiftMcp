@@ -369,11 +369,7 @@ public class GodotMcpServer: @unchecked Sendable {
         ) { args, provider in
             
             if let info = try await provider.getCurrentSceneInfo() {
-                if let path = info.path {
-                    return "The current scene is saved at: \(path)\nRoot Node: \(info.name) (\(info.type))"
-                } else {
-                    return "The current scene is not saved yet\nRoot Node: \(info.name) (\(info.type))"
-                }
+                return "The current scene is stored at: \(info.filePath)\nRoot Node: \(info.rootNode.name) (\(info.rootNode.type))"
             } else {
                 return "There is no current scene"
             }
@@ -474,44 +470,47 @@ public class GodotMcpServer: @unchecked Sendable {
             name: "Godot Script List",
             uri: "godot/scripts",
             mimeType: "application/json"),
-        Resource(
-            name: "Godot Project Structure",
-            uri: "godot/project/structure",
-            mimeType: "application/json"),
-        Resource(
-            name: "Godot Project Settings",
-            uri: "godot/project/settings",
-            mimeType: "application/json"),
-        Resource(
-            name: "Godot Project Resources",
-            uri: "godot/project/resources",
-            mimeType: "application/json"),
-        Resource(
-            name: "Godot Editor State",
-            uri: "godot/editor/state",
-            mimeType: "application/json"),
+//        Resource(
+//            name: "Godot Project Structure",
+//            uri: "godot/project/structure",
+//            mimeType: "application/json"),
+//        Resource(
+//            name: "Godot Project Settings",
+//            uri: "godot/project/settings",
+//            mimeType: "application/json"),
+        //
+        // This is doing a server-side sorting of files by kind, wonder if it is worth having this
+        // or if we should just filter here
+//        Resource(
+//            name: "Godot Project Resources",
+//            uri: "godot/project/resources",
+//            mimeType: "application/json"),
+//        Resource(
+//            name: "Godot Editor State",
+//            uri: "godot/editor/state",
+//            mimeType: "application/json"),
         Resource(
             name: "Godot Selected Node",
             uri: "godot/editor/selected_node",
             mimeType: "application/json"),
-        Resource(
-            name: "Current Script in Editor",
-            uri: "godot/editor/current_script",
-            mimeType: "text/plain"),
+//        Resource(
+//            name: "Current Script in Editor",
+//            uri: "godot/editor/current_script",
+//            mimeType: "text/plain"),
         Resource(
             name: "Godot Scene Structure",
             uri: "godot/scene/current",
             mimeType: "application/json"),
-        
-        Resource(
-            name: "Script Content",
-            uri: "godot/script",
-            mimeType: "text/plain"
-        ),
-        Resource(
-            name: "Godot Script Metadata",
-            uri: "godot/script/metadata",
-            mimeType: "application/json"),
+//        
+//        Resource(
+//            name: "Script Content",
+//            uri: "godot/script",
+//            mimeType: "text/plain"
+//        ),
+//        Resource(
+//            name: "Godot Script Metadata",
+//            uri: "godot/script/metadata",
+//            mimeType: "application/json"),
         Resource(
             name: "Full Scene Tree",
             uri: "godot/scene/tree",
@@ -526,10 +525,17 @@ public class GodotMcpServer: @unchecked Sendable {
             mimeType: "application/json")
     ]
     
+    let templates: [Resource.Template] = [
+//        Resource.Template(uriTemplate: <#T##String#>, name: <#T##String#>)
+    ]
+    
     func registerResources() async {
         // Register a resource list handler
         await server.withMethodHandler(ListResources.self) { params in
             return .init(resources: self.resources, nextCursor: nil)
+        }
+        await server.withMethodHandler(ListResourceTemplates.self) { params in
+            return .init(templates: self.templates)
         }
 
         // Register a resource read handler
@@ -541,11 +547,37 @@ public class GodotMcpServer: @unchecked Sendable {
             func stringJson(_ jsonData: Data) -> ReadResource.Result {
                 return stringJson(String(data: jsonData, encoding: .utf8) ??  "")
             }
+            
             switch params.uri {
             case "godot/scenes":
                 let files = try await self.provider.listProjectFiles(extensions: [".tscn", ".scn"])
                 let encoder = JSONEncoder()
                 return stringJson(try encoder.encode(files))
+            case "godot/scene/current":
+                guard let scene = try await self.provider.getCurrentSceneInfo() else {
+                    throw MCPError.serverError(code: -32002, message: "There is no current scene open")
+                }
+                let e = JSONEncoder()
+                return stringJson(try e.encode(scene))
+            case "godot/scripts":
+                let files = try await self.provider.listProjectFiles(extensions: [".gd"])
+                let encoder = JSONEncoder()
+                return stringJson(try encoder.encode(files))
+            case "godot/assets":
+                let files = try await self.provider.listProjectFiles(extensions: [])
+                let encoder = JSONEncoder()
+                return stringJson(try encoder.encode(files))
+            case "godot/scene/tree":
+                let tree = try await self.provider.getSceneTree()
+                let encoder = JSONEncoder()
+                return stringJson(try encoder.encode(tree))
+                case "godot/debug/log":
+                let output = try await self.provider.getDebugOutput()
+                return .init(contents: [.text(output, uri: params.uri, mimeType: "text/plain")])
+            case "godot/editor/selected_node":
+                let node = try await self.provider.getSelectedNode()
+                let encoder = JSONEncoder()
+                return stringJson(try encoder.encode(node))
             default:
                 throw MCPError.invalidParams("Unknown resource URI: \(params.uri)")
             }
@@ -554,7 +586,7 @@ public class GodotMcpServer: @unchecked Sendable {
     
     func registerHandlers() async throws {
         try await registerTools()
-        try await registerResources()
+        await registerResources()
 
         // Register a resource subscribe handler
     }

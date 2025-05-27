@@ -54,6 +54,8 @@ func dump(_ x: GodotProviderNode, indent: String = "") {
 }
 
 
+let node  = try await provider.getSelectedNode()
+
 dump(x)
 //let y = try await provider.getDebugOutput()
 //print(y)

@@ -316,29 +316,31 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
         throw GodotMcpError.responseError("Did not get an output back")
     }
     
+    func loadProviderNode(_ dict: [String: Any]) -> GodotProviderNode? {
+        guard let path = dict["path"] as? String else { return nil }
+        //some core properties are also returned
+        guard let name = dict["name"] as? String else { return nil }
+        guard let type = dict["type"] as? String else { return nil }
+        guard let children = dict["children"] as? [[String: Any]] else {
+            return nil
+        }
+        let script = dict["script"] as? String
+        let pdict = (dict["properties"] as? [String: Any]) ?? [:]
+        let properties = GodotProviderNode.Properties(pdict)
+        var childResults: [GodotProviderNode] = []
+        for childDict in children {
+            if let childNode = loadProviderNode(childDict) {
+                childResults.append(childNode)
+            }
+        }
+        return GodotProviderNode(name: name, type: type, path: path, script: script, properties: properties, children: childResults)
+    }
+    
     public func getSceneTree() async throws -> GodotProviderNode {
         let res = try await sendCommand("get_full_scene_tree", [:])
         
-        func buildFrom(_ dict: [String: Any]) -> GodotProviderNode? {
-            guard let path = dict["path"] as? String else { return nil }
-            //some core properties are also returned
-            guard let name = dict["name"] as? String else { return nil }
-            guard let type = dict["type"] as? String else { return nil }
-            guard let children = dict["children"] as? [[String: Any]] else {
-                return nil
-            }
-            let script = dict["script"] as? String
-            let pdict = (dict["properties"] as? [String: Any]) ?? [:]
-            let properties = GodotProviderNode.Properties(pdict)
-            var childResults: [GodotProviderNode] = []
-            for childDict in children {
-                if let childNode = buildFrom(childDict) {
-                    childResults.append(childNode)
-                }
-            }
-            return GodotProviderNode(name: name, type: type, path: path, script: script, properties: properties, children: childResults)
-        }
-        if let result = buildFrom(res) {
+        
+        if let result = loadProviderNode(res) {
             return result
         }
         throw GodotMcpError.responseError("Did not get an array with the data")
@@ -352,16 +354,37 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
         return ""
     }
     
-    public func getCurrentSceneInfo() async throws -> (path: String?, name: String, type: String)? {
+    public func getCurrentSceneInfo() async throws -> GodotSceneInformation? {
         let res = try await sendCommand("get_current_scene_structure", [:])
         // There is a ton of extra information being returned
-        let path = res["path"] as? String
-        let name = res["root_node_name"] as! String
-        let type = res["root_node_type"] as! String
-        return (path, name, type)
+        guard let path = res["path"] as? String else {
+            return nil
+        }
+        guard let structure = res["structure"] as? [String: Any] else {
+            throw GodotMcpError.responseError("Did not get the complete return value")
+        }
+        guard let result = loadProviderNode(structure) else {
+            throw GodotMcpError.responseError("Could not parse the data")
+        }
+        return GodotSceneInformation(filePath: path, rootNode: result)
     }
     
     public func update2DTransform(nodePath: String, position: (Double, Double)?, rotation: Double?, scale: (Double, Double)?) {
+    }
+
+    public func getSelectedNode() async throws -> GodotProviderNode {
+        let res = try await sendCommand("get_selected_node", [:])
+        let scriptPath = res["script_path"] as? String
+        
+        guard let path = res["path"] as? String,
+              let selected = res["selected"] as? Bool,
+              let type = res["type"] as? String,
+              let name = res["name"] as? String,
+              let pDict = res["properties"] as? [String: Any]
+        else {
+            throw GodotMcpError.responseError("Did not get the full node information")
+        }
+        return GodotProviderNode(name: name, type: type, path: path, script: scriptPath, properties: GodotProviderNode.Properties(pDict), children: nil)
     }
     
     public func getScenes() -> String {

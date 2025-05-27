@@ -67,7 +67,7 @@ public enum GodotMcpError: LocalizedError {
     public var recoverySuggestion: String? { nil }
 }
 
-public final class GodotProviderNode: Sendable {
+public final class GodotProviderNode: Sendable, Codable {
     public let name: String
     public let type: String
     public let children: [GodotProviderNode]?
@@ -75,7 +75,7 @@ public final class GodotProviderNode: Sendable {
     public let properties: Properties
     public let script: String?
 
-    public struct Properties: Sendable {
+    public struct Properties: Sendable, Codable {
         let scale: String
         let rotation: Double
         let visible: Bool
@@ -95,6 +95,16 @@ public final class GodotProviderNode: Sendable {
         self.path = path
         self.script = script
         self.properties = properties
+    }
+}
+
+public final class GodotSceneInformation: Sendable, Codable {
+    public let filePath: String
+    public let rootNode: GodotProviderNode
+    
+    public init(filePath: String, rootNode: GodotProviderNode) {
+        self.filePath = filePath
+        self.rootNode = rootNode
     }
 }
 
@@ -119,9 +129,12 @@ public protocol GodotProvider {
     
     func getDebugOutput() async throws -> String
     
-    func getCurrentSceneInfo() async throws -> (path: String?, name: String, type: String)?
+    func getCurrentSceneInfo() async throws -> GodotSceneInformation?
     
-    func update2DTransform(nodePath: String, position: (Double, Double)?, rotation: Double?, scale: (Double, Double)?) async throws    
+    func update2DTransform(nodePath: String, position: (Double, Double)?, rotation: Double?, scale: (Double, Double)?) async throws
+    
+    /// This return will not include children
+    func getSelectedNode() async throws -> GodotProviderNode
 }
 
 extension CallTool.Result {
