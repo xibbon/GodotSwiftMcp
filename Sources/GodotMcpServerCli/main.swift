@@ -20,7 +20,7 @@ print("Sending command")
 DispatchQueue.main.async {
     print("Running on Main")
 }
-
+#if false
 let res1 = try await provider.createNode(parentPath: "", nodeType: "Label", nodeName: "MyNewLabel")
 print ("CreateNode: \(res1)")
 let res = try await provider.getNodeProperties(nodePath: "Player")
@@ -41,8 +41,24 @@ print("The content is now: \(contents)")
 //let assets = try await provider.listAssets(type: "resources")
 //print(assets)
 
-//let pr = try await provider.listProjectFiles(extensions: ["gd"])
-let execute = try await provider.executeEditorScript(code: "1+3")
+let pr = try await provider.listProjectFiles(extensions: ["gd"])
+//let execute = try await provider.executeEditorScript(code: "1+3")
+#endif
+
+let x = try await provider.getSceneTree()
+func dump(_ x: GodotProviderNode, indent: String = "") {
+    print("\(indent)name: \(x.name) - \(x.type)")
+    for child in x.children ?? [] {
+        dump(child, indent: indent + "  ")
+    }
+}
+
+
+dump(x)
+//let y = try await provider.getDebugOutput()
+//print(y)
+let z = try await provider.getCurrentSceneInfo()
+print("SceneInfo: \(z)")
 while true {
     try await Task.sleep(for: .milliseconds(100))
 }

@@ -67,10 +67,35 @@ public enum GodotMcpError: LocalizedError {
     public var recoverySuggestion: String? { nil }
 }
 
-public struct GodotProviderNode {
+public final class GodotProviderNode: Sendable {
     public let name: String
     public let type: String
     public let children: [GodotProviderNode]?
+    public let path: String
+    public let properties: Properties
+    public let script: String?
+
+    public struct Properties: Sendable {
+        let scale: String
+        let rotation: Double
+        let visible: Bool
+        let position: String
+        
+        public init(_ dictionary: [String: Any]) {
+            scale = dictionary["scale"] as? String ?? ""
+            rotation = dictionary["rotation"] as? Double ?? Double((dictionary["rotation"] as? Int) ?? 0)
+            visible = dictionary["visible"] as? Bool ?? true
+            position = dictionary["position"] as? String ?? ""
+        }
+    }
+    public init(name: String, type: String, path: String, script: String?, properties: Properties, children: [GodotProviderNode]?) {
+        self.name = name
+        self.type = type
+        self.children = children
+        self.path = path
+        self.script = script
+        self.properties = properties
+    }
 }
 
 public protocol GodotProvider {
@@ -96,10 +121,7 @@ public protocol GodotProvider {
     
     func getCurrentSceneInfo() async throws -> (path: String?, name: String, type: String)?
     
-    func update2DTransform(nodePath: String, position: (Double, Double)?, rotation: Double?, scale: (Double, Double)?) async throws
-    
-    // Resources
-    func getScenes() async throws -> String 
+    func update2DTransform(nodePath: String, position: (Double, Double)?, rotation: Double?, scale: (Double, Double)?) async throws    
 }
 
 extension CallTool.Result {

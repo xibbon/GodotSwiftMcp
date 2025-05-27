@@ -538,10 +538,14 @@ public class GodotMcpServer: @unchecked Sendable {
             func stringJson(_ jsonText: String) -> ReadResource.Result {
                 .init(contents: [.text(jsonText, uri: params.uri, mimeType: "application/json")])
             }
+            func stringJson(_ jsonData: Data) -> ReadResource.Result {
+                return stringJson(String(data: jsonData, encoding: .utf8) ??  "")
+            }
             switch params.uri {
             case "godot/scenes":
-                return stringJson(try await self.provider.getScenes())
-                
+                let files = try await self.provider.listProjectFiles(extensions: [".tscn", ".scn"])
+                let encoder = JSONEncoder()
+                return stringJson(try encoder.encode(files))
             default:
                 throw MCPError.invalidParams("Unknown resource URI: \(params.uri)")
             }
