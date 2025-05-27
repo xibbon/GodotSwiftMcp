@@ -14,7 +14,8 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
     var frames: [Data] = []
     var ws: WebSocket?
     var connected: Bool = false
-    
+    let stderr = FileHandle.standardError
+
     func flushPending() {
         guard let ws else { return }
         if frames.count > 0 {
@@ -42,9 +43,10 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
 
     public func didReceive(event: Starscream.WebSocketEvent, client: any Starscream.WebSocketClient) {
         func p(_ str: String) {
-            print ("WebSocket.didReceive: \(str)")
+            if let bytes = str.data(using: .utf8) {
+                stderr.write(bytes)
+            }
         }
-        print("didReceive")
         switch event {
         case .binary(let data):
             p("Got binary data: \(data.count)")
@@ -56,7 +58,7 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
             p("Disconnected: \(str) code: \(code)")
             ws = nil
         case .text(let text):
-            print(text)
+            p(text)
             var commandId: String? = nil
             var status: String? = nil
 
@@ -68,7 +70,7 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
                 }
                 
                 guard let commandId, let status else {
-                    print("Received data that did not contain a commandId: \(text)")
+                    p("Received data that did not contain a commandId: \(text)")
                     return
                 }
                 
@@ -95,10 +97,10 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
                         commandTask.1.resume(throwing: error)
                     }
                 } else {
-                    print("Had a commandId that is no longer present: \(commandId)")
+                    p("Had a commandId that is no longer present: \(commandId)")
                 }
             } else {
-                print("Failure to decode input, which was expected to be a Json frame: \(text)")
+                p("Failure to decode input, which was expected to be a Json frame: \(text)")
             }
         case .pong(let pong):
             p("Pong: \(String(describing: pong))")
@@ -164,7 +166,6 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
         nextCommand += 1
         let v = try e.encode(cmd)
         frames.append(v)
-        //print("Sending \(String(data: v, encoding: .utf8)!)")
         let result = try await withCheckedThrowingContinuation { continuation in
             pendingCommands[cmd.commandId] = (cmd, continuation)
             if connected {
@@ -219,8 +220,6 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
         if let pdict = res["properties"] as? [String: Any] {
             var result: [String: String] = [:]
 
-            print(pdict)
-            
             for (key, value) in pdict {
                 if let str = value as? String {
                     result[key] = str
@@ -231,7 +230,7 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
                 } else if let double = value as? Double {
                     result[key] = "\(double)"
                 } else {
-                    print("Skipping \(value)")
+                    try! FileHandle.standardError.write(contentsOf: "Skipping \(value)".data(using: .utf8)!)
                 }
             }
             return result
