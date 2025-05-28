@@ -6,7 +6,6 @@ import Logging
 
 LoggingSystem.bootstrap(StreamLogHandler.standardError)
 let logger = Logger(label: "godotMcp")
-logger.error("MIGUEL STARTING")
 
 let url = URL(string: "http://10.10.11.195:9080")
 
