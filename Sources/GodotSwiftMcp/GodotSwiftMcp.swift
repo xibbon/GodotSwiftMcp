@@ -39,7 +39,7 @@ public class GodotMcpServer: @unchecked Sendable {
             description: "Creates a new node in the current Godot scene",
             inputSchema: .object(
                 properties: [
-                    "parent_path": .string(description: "Path to the parent node where the new node will be created (e.g. '/root\', '/root/MainScene')"),
+                    "parent_path": .string(description: "Path to the parent node where the new node will be created (e.g. '/level/', '/level/MainScene'), for the root node use '/' or the empty string"),
                     "node_type": .string(description: "Type of node to create (e.g. 'Node2D', 'Sprite2D', 'Label')"),
                     "node_name": .string(description: "Name of the new node")
                 ],
@@ -58,7 +58,7 @@ public class GodotMcpServer: @unchecked Sendable {
             description: "Deletes a node in the current Godot scene",
             inputSchema: .object(
                 properties: [
-                    "node_path": .string(description: "Path to the node to delete (e.g. '/root/MainScene/Player')")
+                    "node_path": .string(description: "Path to the node to delete (e.g. '/MainScene/Player')")
                 ],
                 required: ["node_path"]),
             annotations: .init(title: "Deltes a node in the current Godot scene", readOnlyHint: false, destructiveHint: true, idempotentHint: false)
@@ -76,7 +76,7 @@ public class GodotMcpServer: @unchecked Sendable {
             description: "Updates a property of a node in the Godot scene tree",
             inputSchema: .object(
                 properties: [
-                    "node_path": .string(description: "Path of the node to update (e.g. '/root\', '/root/MainScene/Player')"),
+                    "node_path": .string(description: "Path of the node to update (e.g. '/levels\', '/MainScene/Player')"),
                     "property": .string(description: "Name of the property to update (e.g. 'position', 'scale', 'text', 'modulate)"),
                     "value": .string(description: "New value for the property")
                     ],
@@ -98,7 +98,7 @@ public class GodotMcpServer: @unchecked Sendable {
             description: "Get all properties of a node in the Godot scene tree",
             inputSchema: .object(
                 properties: [
-                    "node_path": .string(description: "Path to the node to inspect (e.g. '/root/MainScene/Player')")],
+                    "node_path": .string(description: "Path to the node to inspect (e.g. '/MainScene/Player')")],
                 required: ["node_path"]),
             annotations: .init(title: "Get all properties of a node in the Godot scene tree", readOnlyHint: true, destructiveHint: false, idempotentHint:true)
         ) { args, provider in
@@ -114,7 +114,7 @@ public class GodotMcpServer: @unchecked Sendable {
             description: "Lists all child nodes under a parent node in the Godot scene tree",
             inputSchema: .object(
                 properties: [
-                    "parent_path": .string(description: "Path to the parent node (e.g. '/root', '/root/MainScene')")
+                    "parent_path": .string(description: "Path to the parent node (e.g. '/', '/levels/MainScene')")
                 ],
                 required: ["parent_path"]
             ),
@@ -138,7 +138,7 @@ public class GodotMcpServer: @unchecked Sendable {
             description: "Create a new GDScript file in the project",
             inputSchema: .object(
                 properties: [
-                    "script_path": .string(description: "Path where the script will be saved (e.g. 'res://scripts/player.gd')"),
+                    "script_path": .string(description: "Path where the script will be saved (e.g. 'res://scripts/player.gd', it should contain both the prefix res:// as well as the file extension .gd)"),
                     "content": .string(description: "Content of the scritpt"),
                     "node_path": .string(description: "Optional path to a node to attach the script to.")
                 ],
@@ -380,7 +380,7 @@ public class GodotMcpServer: @unchecked Sendable {
             description: "Update position, rotation, or scale of a Node",
             inputSchema: .object(
                 properties: [
-                    "node_path": .string(description: "Path to the node to update (e.g. '/root/MainScene/Player')"),
+                    "node_path": .string(description: "Path to the node to update (e.g. '/MainScene/Player')"),
                     "position": .array(description: "New position as (x, y)", items: .number(), minItems: 2, maxItems: 2),
                     "rotation": .number(description: "New rotation in radians"),
                     "scale": .array(description: "New scale as (x, y)", items: .number(), minItems: 2, maxItems: 2),

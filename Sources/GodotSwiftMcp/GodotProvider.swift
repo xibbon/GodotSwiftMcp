@@ -23,6 +23,9 @@ public enum GodotMcpError: LocalizedError {
     case unimplemented
     case responseError(String)
     case remoteError(String)
+    case failedToParse(String)
+    case failedToExecute(String)
+    case notimplemented
     
     /// A localized message describing what error occurred.
     public var errorDescription: String? {
@@ -57,6 +60,12 @@ public enum GodotMcpError: LocalizedError {
             "Received a response that did not know how to interpret: \(s)"
         case .remoteError(let message):
             "Godot replied: \(message)"
+        case .failedToParse(let expr):
+            "Failed to parse the expression \(expr) as sa Godot type"
+        case .failedToExecute(let expr):
+            "Failed to execute the expression \(expr) while parsing the value"
+        case .notimplemented:
+            "This functionality has not been implemented"
         }
     }
     
