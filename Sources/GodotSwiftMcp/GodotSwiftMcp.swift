@@ -369,7 +369,11 @@ public class GodotMcpServer: @unchecked Sendable {
         ) { args, provider in
             
             if let info = try await provider.getCurrentSceneInfo() {
-                return "The current scene is stored at: \(info.filePath)\nRoot Node: \(info.rootNode.name) (\(info.rootNode.type))"
+                if info.filePath.isEmpty {
+                    return "The current scene has not been saved\nRoot Node: \(info.rootNode.name) (\(info.rootNode.type))"
+                } else {
+                    return "The current scene is stored at: \(info.filePath)\nRoot Node: \(info.rootNode.name) (\(info.rootNode.type))"
+                }
             } else {
                 return "There is no current scene"
             }

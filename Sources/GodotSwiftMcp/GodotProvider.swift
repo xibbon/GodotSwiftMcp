@@ -12,6 +12,7 @@ public enum GodotMcpError: LocalizedError {
     case invalidNodeType(String)
     case missingSceneRoot
     case nodeNotFound(String)
+    case nodeHasNoScript(String)
     case missingParent(String)
     case cannotInstantiateType(String)
     case errorCreatingType(String)
@@ -25,7 +26,10 @@ public enum GodotMcpError: LocalizedError {
     case remoteError(String)
     case failedToParse(String)
     case failedToExecute(String)
+    case godotError(LocalizedError)
+    case ioError(String)
     case notimplemented
+    case failedToLoadScript
     
     /// A localized message describing what error occurred.
     public var errorDescription: String? {
@@ -34,6 +38,8 @@ public enum GodotMcpError: LocalizedError {
             "The functionality is not implemented in this Godot"
         case .invalidNodeType(let type):
             "Invalid node type: \(type)"
+        case .nodeHasNoScript(let nodePath):
+            "The node at '\(nodePath)' does not have an attached script"
         case .missingSceneRoot:
             "No scene is currently being edited"
         case .nodeNotFound(let path):
@@ -66,6 +72,12 @@ public enum GodotMcpError: LocalizedError {
             "Failed to execute the expression \(expr) while parsing the value"
         case .notimplemented:
             "This functionality has not been implemented"
+        case .ioError(let message):
+            message
+        case .godotError(let error):
+            "Godot error: \(String(describing: error.errorDescription))"
+        case .failedToLoadScript:
+            "Failed to load the script"
         }
     }
     
@@ -82,27 +94,29 @@ public final class GodotProviderNode: Sendable, Codable {
     public let children: [GodotProviderNode]?
     public let path: String
     public let properties: Properties
-    public let script: String?
+    public let scriptPath: String?
+    public let scriptClassName: String?
 
     public struct Properties: Sendable, Codable {
         let scale: String
-        let rotation: Double
+        let rotation: String
         let visible: Bool
         let position: String
         
         public init(_ dictionary: [String: Any]) {
             scale = dictionary["scale"] as? String ?? ""
-            rotation = dictionary["rotation"] as? Double ?? Double((dictionary["rotation"] as? Int) ?? 0)
+            rotation = dictionary["rotation"] as? String ?? ""
             visible = dictionary["visible"] as? Bool ?? true
             position = dictionary["position"] as? String ?? ""
         }
     }
-    public init(name: String, type: String, path: String, script: String?, properties: Properties, children: [GodotProviderNode]?) {
+    public init(name: String, type: String, path: String, scriptPath: String?, scriptClassName: String?, properties: Properties, children: [GodotProviderNode]?) {
         self.name = name
         self.type = type
         self.children = children
         self.path = path
-        self.script = script
+        self.scriptPath = scriptPath
+        self.scriptClassName = scriptClassName
         self.properties = properties
     }
 }
@@ -127,7 +141,10 @@ public protocol GodotProvider {
     
     func createScript(scriptPath: String, content: String, nodePath: String?) async throws
     func editScript(scriptPath: String, content: String) async throws
-    func getScript(scriptPath: String?, nodePath: String?) async throws -> String
+    
+    
+    // The resolved script path in human readable form, suitable to be sent back to the LLM, and the content
+    func getScript(scriptPath: String?, nodePath: String?) async throws -> (String, String)
     
     func listAssets(type: String) async throws -> [String]
     func listProjectFiles(extensions: [String]) async throws -> [String]
@@ -143,7 +160,7 @@ public protocol GodotProvider {
     func update2DTransform(nodePath: String, position: (Double, Double)?, rotation: Double?, scale: (Double, Double)?) async throws
     
     /// This return will not include children
-    func getSelectedNode() async throws -> GodotProviderNode
+    func getSelectedNode() async throws -> GodotProviderNode?
 }
 
 extension CallTool.Result {

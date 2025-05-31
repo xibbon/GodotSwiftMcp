@@ -269,7 +269,7 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
         ])
     }
 
-    public func getScript(scriptPath: String?, nodePath: String?) async throws -> String {
+    public func getScript(scriptPath: String?, nodePath: String?) async throws -> (String, String) {
         let res = try await sendCommand("get_script", [
             "script_path": scriptPath ?? "",
             "node_path": nodePath ?? ""
@@ -277,7 +277,8 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
         guard let content = res["content"] as? String else {
             throw GodotMcpError.responseError("Did not get a script back")
         }
-        return content
+        let scriptPath = res["script_path"] as? String ?? scriptPath ?? ""
+        return (scriptPath, content)
     }
     
     public func listAssets(type: String) async throws -> [String] {
@@ -323,7 +324,7 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
         guard let children = dict["children"] as? [[String: Any]] else {
             return nil
         }
-        let script = dict["script"] as? String
+        let script = dict["script"] as? [String: String] ?? [:]
         let pdict = (dict["properties"] as? [String: Any]) ?? [:]
         let properties = GodotProviderNode.Properties(pdict)
         var childResults: [GodotProviderNode] = []
@@ -332,12 +333,11 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
                 childResults.append(childNode)
             }
         }
-        return GodotProviderNode(name: name, type: type, path: path, script: script, properties: properties, children: childResults)
+        return GodotProviderNode(name: name, type: type, path: path, scriptPath: script["path"], scriptClassName: script["class_name"], properties: properties, children: childResults)
     }
     
     public func getSceneTree() async throws -> GodotProviderNode {
         let res = try await sendCommand("get_full_scene_tree", [:])
-        
         
         if let result = loadProviderNode(res) {
             return result
@@ -371,7 +371,7 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
     public func update2DTransform(nodePath: String, position: (Double, Double)?, rotation: Double?, scale: (Double, Double)?) {
     }
 
-    public func getSelectedNode() async throws -> GodotProviderNode {
+    public func getSelectedNode() async throws -> GodotProviderNode? {
         let res = try await sendCommand("get_selected_node", [:])
         let scriptPath = res["script_path"] as? String
         
@@ -383,7 +383,10 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
         else {
             throw GodotMcpError.responseError("Did not get the full node information")
         }
-        return GodotProviderNode(name: name, type: type, path: path, script: scriptPath, properties: GodotProviderNode.Properties(pDict), children: nil)
+        if selected == false {
+            return nil
+        }
+        return GodotProviderNode(name: name, type: type, path: path, scriptPath: scriptPath, scriptClassName: nil, properties: GodotProviderNode.Properties(pDict), children: nil)
     }
     
     public func getScenes() -> String {
