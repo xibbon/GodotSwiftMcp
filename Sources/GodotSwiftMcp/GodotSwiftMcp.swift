@@ -129,7 +129,8 @@ public class GodotMcpServer: @unchecked Sendable {
             }
             let result = success.map { v in "\(v.name) (\(v.type) - \(v.path)" }.joined(separator: "\n")
             return ("Children nodes of node at '\(parentPath)': \n\n\(result)")
-        }
+        },
+        
     ]
     
     let scriptTools: [GodotTool] = [

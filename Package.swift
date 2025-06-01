@@ -24,7 +24,7 @@ let package = Package(
     ],
     dependencies: [
             .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.8.2"),
-            .package(url: "https://github.com/loopwork-ai/JSONSchema.git", from: "1.1.0"),
+            .package(url: "https://github.com/loopwork-ai/JSONSchema.git", "1.1.0"..<"1.1.1"),
             .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.6")
     ],
     targets: [
