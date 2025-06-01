@@ -35,6 +35,45 @@ public class GodotMcpServer: @unchecked Sendable {
     
     let sceneTools: [GodotTool] = [
         GodotTool(
+            name: "save_scene",
+            description: "Saves the scene to the disk, ensuring that all the changes made are preserved, by default it just saves the current scene, but you can specify a new name to save the scene to by providing a Godot file path ending in the .tscn extension (e.g. 'res://main.tscn', 'res://levels/dungeon/dungeon.tscn', 'res://characters/enemies/ghost.tscn').  If you have created a new scene, you must provide a file name, but if you just want to save the changes, you can call it without the file name argument.",
+            inputSchema: .object(
+                properties: [
+                    "file_name": .string(description: "Godot file path where the scene should be stored, if no path is provided and the scene is new, the user will be prompted to save it"),
+                ],
+                required: []),
+            annotations: .init(readOnlyHint: false, destructiveHint: true, idempotentHint: false)
+        ) { args, provider in
+            guard let fileName = args["file_name"]?.stringValue else { throw MCPError.invalidParams("Missing parameter 'file_name") }
+            let file = try await provider.saveScene(fileName: fileName)
+            return "Saved the scene to \(file)"
+        },
+        GodotTool(
+            name: "new_scene",
+            description: "Creates a new scene to hold Godot nodes, you should specify the Godot file path where this will be saved.  Optionally, you can provide a root node kind for your scene.  Optionally this scene can inherit the behavior of another scene specified by a Godot file path.   Godot file paths starts with the prefix 'res://' and ends with the extension '.tscn' for textual scenes (most common), '.scn' (for binary scenes) or '.res' (most rare).   Some examples include'res://main.tscn', 'res://levels/dungeon/dungeon.tscn', 'res://characters/enemies/ghost.scn').  The root node kind is 2D for creating a 2D Scene, 3D for creating a 3D Scene, UI for creating a user interface scene or it can be omitted to create an empty scene.",
+            inputSchema: .object(
+                properties: [
+                    "file_name": .string(description: "Godot file path where the scene should be stored, if no path is provided and the scene is new, the user will be prompted to save it"),
+                    "root_kind": .string(description: "The Godot root node type for the scene ('2D', '3D', 'UI') but this is optional."),
+                    "inheriting": .string(description: "Godot file path pointing to the scene that this scene will inherit from, or empty if this scene is not inheriting any behavior from an existing scene.")
+                ],
+                required: ["file_name"]),
+            annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: false)
+        ) { args, provider in
+            guard let fileName = args["file_name"]?.stringValue else { throw MCPError.invalidParams("Missing parameter 'file_name") }
+            let rootKind = args["root_type"]?.stringValue
+            let inheriting = args["inheriting"]?.stringValue
+            let file = try await provider.newScene(fileName: fileName, rootType: rootKind, inheriting: inheriting)
+            let msg: String
+            if let inheriting {
+                msg = "Inheriting from the existing \(inheriting) scene"
+            } else {
+                msg = ""
+            }
+            return "Creates a new \(rootKind ?? "empty") scene at \(file) \(msg)"
+        },
+
+        GodotTool(
             name: "create_node",
             description: "Creates a new node in the current Godot scene",
             inputSchema: .object(

@@ -190,6 +190,14 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
         return v
     }
     
+    public func saveScene(fileName: String?) async throws -> String {
+        throw GodotMcpError.unimplemented
+    }
+
+    public func newScene(fileName: String, rootType: String?, inheriting: String?) async throws {
+        throw GodotMcpError.unimplemented
+    }    
+
     public func createNode(parentPath: String, nodeType: String, nodeName: String) async throws -> String {
         let res = try await sendCommand("create_node", [
             "parent_path": parentPath,

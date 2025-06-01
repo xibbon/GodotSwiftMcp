@@ -15,6 +15,8 @@ public enum GodotMcpError: LocalizedError {
     case nodeHasNoScript(String)
     case missingParent(String)
     case cannotInstantiateType(String)
+    case cannotInstantiateScriptType(String)
+    case cannotInstantiatePathBasedType(String, String)
     case errorCreatingType(String)
     case emptyNodePath
     case cannotDeleteRootNode
@@ -78,6 +80,10 @@ public enum GodotMcpError: LocalizedError {
             "Godot error: \(String(describing: error.errorDescription))"
         case .failedToLoadScript:
             "Failed to load the script"
+        case .cannotInstantiateScriptType(let type):
+            "It is not possible to instantiate the script type \(type)"
+        case .cannotInstantiatePathBasedType(let type, let reason):
+            "It was not possible to instantiate a path-based node type: \(type) (\(reason))"
         }
     }
     
@@ -132,6 +138,17 @@ public final class GodotSceneInformation: Sendable, Codable {
 }
 
 public protocol GodotProvider {
+    /// Saves the current scene to the specified fileName if set, or to the existing file name if not set.
+    /// Throws an error if the scene does not have a file name set.
+    /// - Returns: the file where the scene was saved
+    func saveScene(fileName: String?) async throws -> String
+    /// Creates a new scene at the location specified by filenName, and optionally creates a root node of the type provided
+    /// - Parameters:
+    ///  - fileName: the file path where the scene will be created
+    ///  - rootType: optional type for the root scene (2d, 3d, ui or empty)
+    ///  - inheriting: if set, this is a path to an existing script
+    func newScene(fileName: String, rootType: String?, inheriting: String?) async throws
+    
     /// Result is the node path of the resulting node
     func createNode(parentPath: String, nodeType: String, nodeName: String) async throws -> String
     func deleteNode(nodePath: String) async throws -> String
