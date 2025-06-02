@@ -494,6 +494,17 @@ public class GodotMcpServer: @unchecked Sendable {
             do {
                 let value = try await implementation(params.arguments ?? [:], provider)
                 let text: String
+                /// This special case works I think with most of our current tools as they return strings, and thus
+                /// we avoid the escaping here - but I suspect that this is not great for complex structures
+                ///
+                /// The reproduction case was return values from the MCP tool that returned things like:
+                /// "The node is named Foo\nFile Path: res://demo", and we would escape the \n into \\n,
+                /// so the remote end received that instead.
+                ///
+                /// By testing against the original Godot implementation, it is clear that they do not suffer
+                /// from that problem, so the double encoding was a problem in this end.   The question will be
+                /// what to do if we ever return arrays from here or dictionaries, those would end up escaped
+                /// 
                 if let str = value.stringValue {
                     return .init(content: [.text(str)], isError: false)
                 } else {
