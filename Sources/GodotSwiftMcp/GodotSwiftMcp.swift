@@ -33,6 +33,10 @@ public class GodotMcpServer: @unchecked Sendable {
         await server.waitUntilCompleted()
     }
     
+    public func stop() async {
+        try await server.stop()
+    }
+    
     let sceneTools: [GodotTool] = [
         GodotTool(
             name: "save_scene",
@@ -61,7 +65,7 @@ public class GodotMcpServer: @unchecked Sendable {
             annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: false)
         ) { args, provider in
             guard let fileName = args["file_name"]?.stringValue else { throw MCPError.invalidParams("Missing parameter 'file_name") }
-            let rootKind = args["root_type"]?.stringValue
+            let rootKind = args["root_kind"]?.stringValue
             let inheriting = args["inheriting"]?.stringValue
             let file = try await provider.newScene(fileName: fileName, rootType: rootKind, inheriting: inheriting)
             let msg: String
