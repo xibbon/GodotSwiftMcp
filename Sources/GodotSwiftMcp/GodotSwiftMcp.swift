@@ -493,13 +493,18 @@ public class GodotMcpServer: @unchecked Sendable {
             }
             do {
                 let value = try await implementation(params.arguments ?? [:], provider)
-                let encoder = JSONEncoder()
-                encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-                let data = try encoder.encode(value)
-                if let text = String(data: data, encoding: .utf8) {
-                    return .init(content: [.text(text)], isError: false)
+                let text: String
+                if let str = value.stringValue {
+                    return .init(content: [.text(str)], isError: false)
                 } else {
-                    return .init(content: [.text("Could not encode result")], isError: true)
+                    let encoder = JSONEncoder()
+                    encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+                    let data = try encoder.encode(value)
+                    if let text = String(data: data, encoding: .utf8) {
+                        return .init(content: [.text(text)], isError: false)
+                    } else {
+                        return .init(content: [.text("Could not encode result")], isError: true)
+                    }
                 }
             } catch let godotError as GodotMcpError {
                 return .init(content: [.text(godotError.errorDescription ?? "Godot Provider Error")], isError: true)
