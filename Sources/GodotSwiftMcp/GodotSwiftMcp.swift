@@ -87,7 +87,7 @@ public class GodotMcpServer: @unchecked Sendable {
                     "node_name": .string(description: "Name of the new node")
                 ],
                 required: ["parent_path", "node_type", "node_name"]),
-            annotations: .init(title: "Creates a new node in the current Godot scene", readOnlyHint: false, destructiveHint: true, idempotentHint: false)
+            annotations: .init(title: "Creates a new node in the current Godot scene", readOnlyHint: false, destructiveHint: false, idempotentHint: false)
         ) { args, provider in
             guard let parentPath = args["parent_path"]?.stringValue else { throw MCPError.invalidParams("Missing parameter 'parent_path'")}
             guard let nodeType = args["node_type"]?.stringValue else { throw MCPError.invalidParams("Missing parameter 'node_type'") }
@@ -260,7 +260,7 @@ public class GodotMcpServer: @unchecked Sendable {
                     "include_physics": .boolean(description: "Whether to include the _physics_function() function"),
                 ]
             ),
-            annotations: .init(readOnlyHint: false, destructiveHint: true, idempotentHint: false)
+            annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: false)
         ) { args, provider in
             let className = args["class_name"]?.stringValue
             let extendsType = args["extends_type"]?.stringValue ?? "Node"
@@ -357,7 +357,7 @@ public class GodotMcpServer: @unchecked Sendable {
     let editorTools: [GodotTool] = [
         GodotTool(
             name: "execute_editor_script",
-            description: "Executes arbitrary GDScript code in the Godot Editor",
+            description: "Executes arbitrary GDScript code in the Godot Editor.  The code provided should be top-level code and if you desire to fetch information back from it, you should explicitly return it",
             inputSchema: .object(
                 properties: [
                     "code": .string(description: "GDScript code to execute in the editor context")
