@@ -353,10 +353,15 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
         throw GodotMcpError.responseError("Did not get an array with the data")
     }
     
-    public func getDebugOutput() async throws -> String {
+    public func getDebugOutput(limit: Int) async throws -> String {
         let res = try await sendCommand("get_debug_output", [:])
         if let output = res["output"] as? String {
-            return output
+            let lines = output.split(separator: "\n")
+            if lines.count > limit {
+                return lines[0..<limit].joined(separator: "\n")
+            } else {
+                return output
+            }
         }
         return ""
     }

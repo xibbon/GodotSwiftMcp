@@ -170,7 +170,7 @@ public protocol GodotProvider {
     
     func getSceneTree() async throws -> GodotProviderNode
     
-    func getDebugOutput() async throws -> String
+    func getDebugOutput(limit: Int) async throws -> String
     
     func getCurrentSceneInfo() async throws -> GodotSceneInformation?
     

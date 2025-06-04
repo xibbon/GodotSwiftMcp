@@ -357,7 +357,7 @@ public class GodotMcpServer: @unchecked Sendable {
     let editorTools: [GodotTool] = [
         GodotTool(
             name: "execute_editor_script",
-            description: "Executes arbitrary GDScript code in the Godot Editor.  The code provided should be top-level code and if you desire to fetch information back from it, you should explicitly return it",
+            description: "Executes arbitrary GDScript code in the Godot Editor.  The code should at least have an instance function called _run: that will contain the code to execute, you can add other function members as helpers, but do not attempt to add @tool or extends EditorScript that will be handled for you",
             inputSchema: .object(
                 properties: [
                     "code": .string(description: "GDScript code to execute in the editor context")
@@ -396,11 +396,16 @@ public class GodotMcpServer: @unchecked Sendable {
         
         GodotTool(
             name: "get_debug_output",
-            description: "Get the debug output from the Godot Editor",
-            inputSchema: .object(),
+            description: "Retrieves the debug output from the Godot Editor, this could be very large, so you can request a limited amount of lines of output by passing in the 'limit' parameter.",
+            inputSchema: .object(
+                properties: [
+                    "limit": .string(description: "Number of lines to return from the end of the output window.  Defaults to 1000")
+                ]
+                ),
             annotations: .init(readOnlyHint: true)
         ) { args, provider in
-            let output = try await provider.getDebugOutput()
+            let limit = args["limit"]?.intValue ?? 1000
+            let output = try await provider.getDebugOutput(limit: limit)
             
             return "Debug Output:\n\(output)"
         },
@@ -636,7 +641,7 @@ public class GodotMcpServer: @unchecked Sendable {
                 let encoder = JSONEncoder()
                 return stringJson(try encoder.encode(tree))
                 case "godot/debug/log":
-                let output = try await self.provider.getDebugOutput()
+                let output = try await self.provider.getDebugOutput(limit: Int.max)
                 return .init(contents: [.text(output, uri: params.uri, mimeType: "text/plain")])
             case "godot/editor/selected_node":
                 let node = try await self.provider.getSelectedNode()
