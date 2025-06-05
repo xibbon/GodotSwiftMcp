@@ -182,7 +182,7 @@ public class GodotMcpServer: @unchecked Sendable {
             description: "Create a new GDScript file in the project",
             inputSchema: .object(
                 properties: [
-                    "script_path": .string(description: "Path where the script will be saved (e.g. 'res://scripts/player.gd', it should contain both the prefix res:// as well as the file extension .gd)"),
+                    "script_path": .string(description: "Path where the script will be saved (e.g. res://scripts/player.gd, it should contain both the prefix res:// as well as the file extension .gd)"),
                     "content": .string(description: "Content of the scritpt"),
                     "node_path": .string(description: "Optional path to a node to attach the script to.")
                 ],
