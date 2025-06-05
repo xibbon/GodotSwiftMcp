@@ -34,7 +34,7 @@ public class GodotMcpServer: @unchecked Sendable {
     }
     
     public func stop() async {
-        try await server.stop()
+        await server.stop()
     }
     
     let sceneTools: [GodotTool] = [
@@ -543,10 +543,10 @@ public class GodotMcpServer: @unchecked Sendable {
 //            name: "Godot Project Structure",
 //            uri: "godot/project/structure",
 //            mimeType: "application/json"),
-//        Resource(
-//            name: "Godot Project Settings",
-//            uri: "godot/project/settings",
-//            mimeType: "application/json"),
+        Resource(
+            name: "Godot Project Settings",
+            uri: "godot/project/settings",
+            mimeType: "application/json"),
         //
         // This is doing a server-side sorting of files by kind, wonder if it is worth having this
         // or if we should just filter here
@@ -647,6 +647,8 @@ public class GodotMcpServer: @unchecked Sendable {
                 let node = try await self.provider.getSelectedNode()
                 let encoder = JSONEncoder()
                 return stringJson(try encoder.encode(node))
+            case "godot/project/settings":
+                return stringJson("a")
             default:
                 throw MCPError.invalidParams("Unknown resource URI: \(params.uri)")
             }

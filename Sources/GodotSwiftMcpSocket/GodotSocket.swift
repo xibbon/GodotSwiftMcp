@@ -10,7 +10,7 @@ import Foundation
 
 public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
     var nextCommand = 0
-    var pendingCommands: [String: (Command, CheckedContinuation<[String: Any],any Error>)] = [:]
+    var pendingCommands: [String: (Command, CheckedContinuation<([String: Any], String),any Error>)] = [:]
     var frames: [Data] = []
     var ws: WebSocket?
     var connected: Bool = false
@@ -89,7 +89,7 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
                         }
                         
                         if status == "success" {
-                            commandTask.1.resume(returning: resultValue)
+                            commandTask.1.resume(returning: (resultValue, text))
                         } else {
                             commandTask.1.resume(throwing: RemoteError.failure(String(describing: resultValue)))
                         }
@@ -155,7 +155,8 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
         }
     }
     
-    public func sendCommand(_ type: String, _ args: [String: Encodable]) async throws -> [String: Any] {
+    /// Sends a command and then returns both the decoded dictionary and the actual return string that we got from the Godot addon
+    public func sendCommandGetSource(_ type: String, _ args: [String: Codable]) async throws -> (dictionary: [String: Any], raw: String) {
         let e = JSONEncoder()
         
         if ws == nil {
@@ -173,6 +174,10 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
             }
         }
         return result
+    }
+    
+    public func sendCommand(_ type: String, _ args: [String: Codable]) async throws -> [String: Any] {
+        try await sendCommandGetSource(type, args).dictionary
     }
     
     func mkError(_ dict: [String: Any]) -> GodotMcpError {
@@ -196,7 +201,7 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
 
     public func newScene(fileName: String, rootType: String?, inheriting: String?) async throws {
         throw GodotMcpError.unimplemented
-    }    
+    }
 
     public func createNode(parentPath: String, nodeType: String, nodeName: String) async throws -> String {
         let res = try await sendCommand("create_node", [
@@ -400,6 +405,12 @@ public class GodotLocalSocketProvider: GodotProvider, WebSocketDelegate {
             return nil
         }
         return GodotProviderNode(name: name, type: type, path: path, scriptPath: scriptPath, scriptClassName: nil, properties: GodotProviderNode.Properties(pDict), children: nil)
+    }
+    
+    public func getCoreProjectSettings() async throws -> String {
+        let res = try await sendCommandGetSource("get_project_settings", [:])
+
+        return res.raw
     }
     
     public func getScenes() -> String {

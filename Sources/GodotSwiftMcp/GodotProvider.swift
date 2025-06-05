@@ -178,6 +178,9 @@ public protocol GodotProvider {
     
     /// This return will not include children
     func getSelectedNode() async throws -> GodotProviderNode?
+    
+    /// Returns a json representation of the core project settings
+    func getCoreProjectSettings() async throws -> String
 }
 
 extension CallTool.Result {

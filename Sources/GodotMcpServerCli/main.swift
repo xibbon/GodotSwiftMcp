@@ -7,7 +7,11 @@ import Logging
 LoggingSystem.bootstrap(StreamLogHandler.standardError)
 let logger = Logger(label: "godotMcp")
 
-let url = URL(string: "http://10.10.11.195:9080")
+// Used by miguel for testing
+// let url = URL(string: "http://10.10.11.195:9080")
+
+// Expects a local godot running the addon
+let url = URL(string: "http://localhost:9080")
 
 let transport = StdioTransport(logger: logger)
 let provider = GodotLocalSocketProvider(target: url!)
@@ -41,7 +45,6 @@ if !testApi {
     
     let pr = try await provider.listProjectFiles(extensions: ["gd"])
     //let execute = try await provider.executeEditorScript(code: "1+3")
-#endif
     
     let x = try await provider.getSceneTree()
     func dump(_ x: GodotProviderNode, indent: String = "") {
@@ -62,4 +65,6 @@ if !testApi {
     while true {
         try await Task.sleep(for: .milliseconds(100))
     }
+#endif
+    let x = try await provider.getCoreProjectSettings()
 }
