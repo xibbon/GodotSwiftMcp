@@ -8,17 +8,17 @@ LoggingSystem.bootstrap(StreamLogHandler.standardError)
 let logger = Logger(label: "godotMcp")
 
 // Used by miguel for testing
-// let url = URL(string: "http://10.10.11.195:9080")
+let url = URL(string: "http://10.10.11.195:9080")
 
 // Expects a local godot running the addon
-let url = URL(string: "http://localhost:9080")
+//let url = URL(string: "http://localhost:9080")
 
 let transport = StdioTransport(logger: logger)
 let provider = GodotLocalSocketProvider(target: url!)
 
 let server = GodotMcpServer(logger: logger, provider: provider)
 
-let testApi = false
+let testApi = true
 if !testApi {
     try await server.start(on: transport)
 } else {

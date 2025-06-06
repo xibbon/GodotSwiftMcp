@@ -130,6 +130,7 @@ func _get_project_settings(client_id: int, params: Dictionary, command_id: Strin
 	var settings = {
 		"project_name": ProjectSettings.get_setting("application/config/name", "Untitled Project"),
 		"project_version": ProjectSettings.get_setting("application/config/version", "1.0.0"),
+		"main_scene": ProjectSettings.get_setting("application/run/main_scene", ""),
 		"display": {
 			"width": ProjectSettings.get_setting("display/window/size/viewport_width", 1024),
 			"height": ProjectSettings.get_setting("display/window/size/viewport_height", 600),
