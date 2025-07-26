@@ -232,7 +232,7 @@ public class GodotMcpServer: @unchecked Sendable {
             inputSchema: .object(
                 properties: [
                     "script_path": .string(description: "Path where the script resides (e.g. 'res://scripts/player.gd')"),
-                    "node_path": .string(description: "Path to a node with the script attached")
+                    "node_path": .string(description: "Path to a node with the script attached (e.g. '/Main/Player')")
                 ],
             ),
             annotations: .init(readOnlyHint: true, destructiveHint: false, idempotentHint: false)
