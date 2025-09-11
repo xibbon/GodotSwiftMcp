@@ -25,7 +25,7 @@ let package = Package(
     dependencies: [
             .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.8.2"),
             .package(url: "https://github.com/loopwork-ai/JSONSchema.git", "1.1.0"..<"1.1.1"),
-            .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.6")
+            .package(url: "https://github.com/xibbon/Starscream.git", from: "4.0.7"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
