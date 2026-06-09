@@ -67,14 +67,14 @@ public class GodotMcpServer: @unchecked Sendable {
             guard let fileName = args["file_name"]?.stringValue else { throw MCPError.invalidParams("Missing parameter 'file_name") }
             let rootKind = args["root_kind"]?.stringValue
             let inheriting = args["inheriting"]?.stringValue
-            let file = try await provider.newScene(fileName: fileName, rootType: rootKind, inheriting: inheriting)
+            try await provider.newScene(fileName: fileName, rootType: rootKind, inheriting: inheriting)
             let msg: String
             if let inheriting {
                 msg = "Inheriting from the existing \(inheriting) scene"
             } else {
                 msg = ""
             }
-            return "Creates a new \(rootKind ?? "empty") scene at \(file) \(msg)"
+            return "Creates a new \(rootKind ?? "empty") scene at \(fileName) \(msg)"
         },
 
         GodotTool(
@@ -203,7 +203,7 @@ public class GodotMcpServer: @unchecked Sendable {
             } else {
                 attachMessage = ""
             }
-            try await await provider.createScript(scriptPath: scriptPath, content: content, nodePath: nodePath)
+            try await provider.createScript(scriptPath: scriptPath, content: content, nodePath: nodePath)
             return "Created script at '\(scriptPath)'\(attachMessage)."
         },
         GodotTool(
@@ -488,17 +488,16 @@ public class GodotMcpServer: @unchecked Sendable {
         await server.withMethodHandler(CallTool.self) { [weak self] params in
             guard let self else {
                 return CallTool.Result(
-                    content: [.text("Server unavailable")],
+                    content: [.text(text: "Server unavailable", annotations: nil, _meta: nil)],
                     isError: true
                 )
             }
             self.logger.notice("Tool call for \(params.name)")
             guard let implementation = implementations[params.name] else {
-                return .init(content: [.text("Unknown tool")], isError: true)
+                return .init(content: [.text(text: "Unknown tool", annotations: nil, _meta: nil)], isError: true)
             }
             do {
                 let value = try await implementation(params.arguments ?? [:], provider)
-                let text: String
                 /// This special case works I think with most of our current tools as they return strings, and thus
                 /// we avoid the escaping here - but I suspect that this is not great for complex structures
                 ///
@@ -511,21 +510,21 @@ public class GodotMcpServer: @unchecked Sendable {
                 /// what to do if we ever return arrays from here or dictionaries, those would end up escaped
                 /// 
                 if let str = value.stringValue {
-                    return .init(content: [.text(str)], isError: false)
+                    return .init(content: [.text(text: str, annotations: nil, _meta: nil)], isError: false)
                 } else {
                     let encoder = JSONEncoder()
                     encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
                     let data = try encoder.encode(value)
                     if let text = String(data: data, encoding: .utf8) {
-                        return .init(content: [.text(text)], isError: false)
+                        return .init(content: [.text(text: text, annotations: nil, _meta: nil)], isError: false)
                     } else {
-                        return .init(content: [.text("Could not encode result")], isError: true)
+                        return .init(content: [.text(text: "Could not encode result", annotations: nil, _meta: nil)], isError: true)
                     }
                 }
             } catch let godotError as GodotMcpError {
-                return .init(content: [.text(godotError.errorDescription ?? "Godot Provider Error")], isError: true)
+                return .init(content: [.text(text: godotError.errorDescription ?? "Godot Provider Error", annotations: nil, _meta: nil)], isError: true)
             } catch {
-                return .init(content: [.text(error.localizedDescription)], isError: true)
+                return .init(content: [.text(text: error.localizedDescription, annotations: nil, _meta: nil)], isError: true)
             }
         }
     }

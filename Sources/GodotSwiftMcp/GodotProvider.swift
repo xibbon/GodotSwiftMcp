@@ -185,6 +185,6 @@ public protocol GodotProvider {
 
 extension CallTool.Result {
     public init(_ error: GodotMcpError) {
-        self.init(content: [.text(error.errorDescription ?? "Unknown Error")], isError: true)
+        self.init(content: [.text(text: error.errorDescription ?? "Unknown Error", annotations: nil, _meta: nil)], isError: true)
     }
 }
