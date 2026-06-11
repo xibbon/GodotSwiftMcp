@@ -166,20 +166,28 @@ class TestMemoryTransport {
     init(){
         self.buffer = TransportSharedMemory()
         Task {
-            let client = SharedMemoryClientTransport(commSpace: buffer)
-            try await client.connect()
-            Task {
-                await client.readLoop(prefix: "CLIENT")
+            do {
+                let client = SharedMemoryClientTransport(commSpace: buffer)
+                try await client.connect()
+                Task {
+                    await client.readLoop(prefix: "CLIENT")
+                }
+                await startClient(client)
+            } catch {
+                print("Error caught: \(error)")
             }
-            await startClient(client)
         }
         Task {
+            do {
             let server = SharedMemoryServerTransport(commSpace: buffer)
             try await server.connect()
             Task {
                 await server.readLoop(prefix: "SERVER")
             }
             await startServer(server)
+            } catch {
+                print("Error caught: \(error)")
+            }
         }
     }
     
